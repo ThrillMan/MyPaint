@@ -46,11 +46,32 @@ class DrawingApp:
         self.btn_save.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
         self.frm_paint_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1, background="black")
-        self.frm_paint_buttons.grid_columnconfigure(0, weight=1)
-        self.btn_color1 = tk.Button(self.frm_paint_buttons, text="Black", command=lambda: self.set_paint_color('black'))
-        self.btn_color2 = tk.Button(self.frm_paint_buttons, text="Green", command=lambda: self.set_paint_color('green'))
-        self.btn_color1.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
-        self.btn_color2.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+
+        self.paints_color_box = tk.Listbox(self.frm_paint_buttons)
+        self.paints_color_box.grid(row=0, column=0, sticky="ew", padx=5, pady=5)  # Add Listbox to grid
+
+        # Create scrollbar for the Listbox
+        self.scrollbar = tk.Scrollbar(self.frm_paint_buttons, orient=tk.VERTICAL)
+        self.scrollbar.grid(row=0, column=1, sticky="ns")  # Add Scrollbar to grid
+
+        color_names = [
+            "red", "green", "blue", "yellow", "black", "white",
+            "orange", "purple", "pink", "brown"
+        ]
+        # Insert color names into the Listbox
+        for color in color_names:
+            self.paints_color_box.insert(tk.END, color)
+
+        self.paints_color_box.config(yscrollcommand=self.scrollbar.set)
+        self.scrollbar.config(command=self.paints_color_box.yview)
+
+        # Position Listbox and Scrollbar
+        self.paints_color_box.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.scrollbar.grid(row=0, column=1, sticky="ns")
+
+        # Bind color selection event
+        self.paints_color_box.bind("<<ListboxSelect>>", self.on_color_select)
+
 
         self.frm_tool_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1)
         self.frm_tool_buttons.grid_columnconfigure(0, weight=1)
@@ -60,6 +81,7 @@ class DrawingApp:
                                         command=lambda: self.set_current_activity("Picking"))
         self.btn_drawing.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         self.btn_color_pick.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
+
 
         self.frm_control_buttons.grid(row=0, column=0, sticky="ew", padx=5)
         self.frm_paint_buttons.grid(row=1, column=0, sticky="ew", padx=5)
@@ -76,6 +98,12 @@ class DrawingApp:
 
         self.frm_paint.focus_set()
 
+    def on_color_select(self, event):
+        #Handles the selection of a color from the Listbox.
+        selected_index = self.paints_color_box.curselection()
+        if selected_index:
+            selected_color = self.paints_color_box.get(selected_index)
+            self.set_paint_color(selected_color)
     def set_paint_color(self, color):
         self.paintColor = color
         self.frm_paint_buttons.config(bg=self.paintColor)
