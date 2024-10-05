@@ -26,6 +26,7 @@ class DrawingApp:
         self.isPressed = False
         self.isDrawing = False
         self.isPickingColor = False
+        self.isFillingColor = False
         self.points = []
 
         self.setup_ui()
@@ -46,6 +47,7 @@ class DrawingApp:
         self.btn_save.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
         self.frm_paint_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1, background="black")
+        self.frm_paint_buttons.grid_columnconfigure(0, weight=1)
 
         self.paints_color_box = tk.Listbox(self.frm_paint_buttons)
         self.paints_color_box.grid(row=0, column=0, sticky="ew", padx=5, pady=5)  # Add Listbox to grid
@@ -69,9 +71,6 @@ class DrawingApp:
         self.paints_color_box.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         self.scrollbar.grid(row=0, column=1, sticky="ns")
 
-        # Bind color selection event
-        self.paints_color_box.bind("<<ListboxSelect>>", self.on_color_select)
-
 
         self.frm_tool_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1)
         self.frm_tool_buttons.grid_columnconfigure(0, weight=1)
@@ -79,9 +78,11 @@ class DrawingApp:
                                      command=lambda: self.set_current_activity("Drawing"))
         self.btn_color_pick = tk.Button(self.frm_tool_buttons, text="Pick Color",
                                         command=lambda: self.set_current_activity("Picking"))
+        self.btn_color_fill = tk.Button(self.frm_tool_buttons, text="Fill With Color",
+                                        command=lambda: self.set_current_activity("ColorFilling"))
         self.btn_drawing.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         self.btn_color_pick.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
-
+        self.btn_color_fill.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
 
         self.frm_control_buttons.grid(row=0, column=0, sticky="ew", padx=5)
         self.frm_paint_buttons.grid(row=1, column=0, sticky="ew", padx=5)
@@ -90,7 +91,8 @@ class DrawingApp:
         self.frm_buttons.grid(row=0, column=0, sticky="ns")
         self.frm_paint.grid(row=0, column=1, sticky="nsew")
 
-        # self.frm_paint.bind('<Motion>', self.drawing)
+        # Bind color selection event
+        self.paints_color_box.bind("<<ListboxSelect>>", self.on_color_select)
         self.frm_paint.bind('<ButtonPress>', self.click_press)
         self.frm_paint.bind('<ButtonRelease>', self.click_release)
         # self.root.bind('<space>', self.fill_with_color)
@@ -98,25 +100,39 @@ class DrawingApp:
 
         self.frm_paint.focus_set()
 
+
     def on_color_select(self, event):
-        #Handles the selection of a color from the Listbox.
+        # Handles the selection of a color from the Listbox.
         selected_index = self.paints_color_box.curselection()
         if selected_index:
             selected_color = self.paints_color_box.get(selected_index)
             self.set_paint_color(selected_color)
+        print("changing focus")
+        # Make sure canvas gets the focus after selecting a color
+        self.frm_paint.focus_set()
+        #
+        # # Unbind <space> from Listbox to avoid interference
+        # self.paints_color_box.unbind("<space>")
+        # self.paints_color_box.unbind_all("<space>")  # This ensures nothing else is interfering with space
+        #
+        # # Bind <space> to the canvas for fill functionality
+        # self.paints_color_box.unbind_all("<space>")
+        # self.frm_paint.bind('<space>', self.fill_with_color)
+
     def set_paint_color(self, color):
         self.paintColor = color
         self.frm_paint_buttons.config(bg=self.paintColor)
 
     def drawing(self, event):
-        # print("draw")
+        print("draw")
         self.mouseX = event.x
         self.mouseY = event.y
-        if self.isPressed and self.isDrawing:
+        if self.isDrawing:
+            print("ifDraw")
             if self.lastMouseX + self.lastMouseY > 0:
                 self.interpolation(event)
-            self.frm_paint.create_line(self.mouseX, self.mouseY, self.mouseX + 1, self.mouseY + 1, fill=self.paintColor)
-            # self.draw_pixel(self.mouseX,self.mouseY)
+            #self.frm_paint.create_line(self.mouseX, self.mouseY, self.mouseX + 1, self.mouseY + 1, fill=self.paintColor)
+            self.draw_pixel(self.mouseX,self.mouseY)
             self.lastMouseX, self.lastMouseY = self.mouseX, self.mouseY
             # if abs(self.lastMouseX - self.mouseX)>3 or abs(self.lastMouseY - self.mouseY)>3:
             # self.interpolation()
@@ -141,6 +157,7 @@ class DrawingApp:
             print(self.hue)
             print(self.r, self.g, self.b)
             self.frm_paint_buttons.config(bg=self.paintColor)
+
 
     def find_color(self, x, y):
         self.sourceX = x
@@ -168,18 +185,29 @@ class DrawingApp:
             self.activity = "Drawing"
             self.isDrawing = True
             self.isPickingColor = False
+            self.isFillingColor = False
         elif setActivity == 'Picking':
             self.activity = "Picking"
             self.isDrawing = False
             self.isPickingColor = True
+            self.isFillingColor = False
+        elif setActivity == 'ColorFilling':
+            self.activity = "ColorFilling"
+            self.isDrawing = False
+            self.isPickingColor = False
+            self.isFillingColor = True
 
     def activity_selector(self):
         if self.activity == 'Drawing':
-            self.frm_paint.bind('<Motion>', self.drawing)
+            self.frm_paint.bind('<B1-Motion>', self.drawing)
             # self.drawing(event)
         elif self.activity == 'Picking':
 
-            self.frm_paint.bind('<Motion>', self.color_picker)
+            self.frm_paint.bind('<B1-Motion>', self.color_picker)
+            # self.color_picker(event)
+        elif self.activity == 'ColorFilling':
+
+            self.frm_paint.bind("<Button-1>",self.fill_with_color)
             # self.color_picker(event)
 
     def interpolation(self, event):
@@ -188,33 +216,35 @@ class DrawingApp:
                                    smooth=1)
 
     def fill_with_color(self, event):
-        # print("fill")
-        self.sourceX = event.x
-        self.sourceY = event.y
+        print("fill")
+        if self.isFillingColor:
+            self.sourceX = event.x
+            self.sourceY = event.y
 
-        x1 = self.frm_paint.winfo_rootx()
-        y1 = self.frm_paint.winfo_rooty()
+            x1 = self.frm_paint.winfo_rootx()
+            y1 = self.frm_paint.winfo_rooty()
 
-        # Get the width and height of the canvas
-        x2 = x1 + self.frm_paint.winfo_width()
-        y2 = y1 + self.frm_paint.winfo_height()
+            # Get the width and height of the canvas
+            x2 = x1 + self.frm_paint.winfo_width()
+            y2 = y1 + self.frm_paint.winfo_height()
 
-        # Capture only the canvas area
-        screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
+            # Capture only the canvas area
+            screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
 
-        arrImg = []
-        for y in range(self.frm_paint.winfo_height()):
-            tempXArr = []
-            for x in range(self.frm_paint.winfo_width()):
-                self.r, self.g, self.b = screenshot.getpixel((x, y))
-                self.hue = f"#{self.r:02x}{self.g:02x}{self.b:02x}"
-                tempXArr.append(self.hue)
-            arrImg.append(tempXArr)
+            arrImg = []
+            for y in range(self.frm_paint.winfo_height()):
+                tempXArr = []
+                for x in range(self.frm_paint.winfo_width()):
+                    self.r, self.g, self.b = screenshot.getpixel((x, y))
+                    self.hue = f"#{self.r:02x}{self.g:02x}{self.b:02x}"
+                    tempXArr.append(self.hue)
+                arrImg.append(tempXArr)
 
-        ogColor = arrImg[event.y][event.x]
-        print("ogcolor:", ogColor, event.x, event.y)
-        self.flood_fill(arrImg, event.x, event.y, self.paintColor)
-        self.draw_pixel(event.x, event.y)
+            ogColor = arrImg[event.y][event.x]
+            print("ogcolor:", ogColor, event.x, event.y)
+            self.flood_fill(arrImg, event.x, event.y, self.paintColor)
+            self.draw_pixel(event.x, event.y)
+
 
     def flood_fill(self, img, x, y, newColor):
         q = deque()
@@ -253,7 +283,6 @@ class DrawingApp:
                 img[y - 1][x] = newColor
                 pixels_to_update.append((x, y - 1))
                 q.append((x, y - 1))
-
 
         self.find_rect(sorted(pixels_to_update))
 
@@ -307,6 +336,10 @@ class DrawingApp:
         self.mousePressY = event.y
         self.isPressed = True
         self.activity_selector()
+
+        #because drawing is binded to motion we need to make sure the initial click also draws a pixel
+        if self.isDrawing:
+            self.draw_pixel(event.x,event.y)
 
     def click_release(self, event):
         self.mouseReleaseX = self.mouseX
