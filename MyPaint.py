@@ -93,12 +93,8 @@ class DrawingApp:
 
         # Bind color selection event
         self.paints_color_box.bind("<<ListboxSelect>>", self.on_color_select)
-        self.frm_paint.bind('<ButtonPress>', self.click_press)
-        self.frm_paint.bind('<ButtonRelease>', self.click_release)
-        # self.root.bind('<space>', self.fill_with_color)
-        self.frm_paint.bind('<space>', self.fill_with_color)
-
-        self.frm_paint.focus_set()
+        self.frm_paint.bind('<ButtonPress-1>', self.click_press)
+        self.frm_paint.bind('<ButtonRelease-1>', self.click_release)
 
 
     def on_color_select(self, event):
@@ -107,18 +103,6 @@ class DrawingApp:
         if selected_index:
             selected_color = self.paints_color_box.get(selected_index)
             self.set_paint_color(selected_color)
-        print("changing focus")
-        # Make sure canvas gets the focus after selecting a color
-        self.frm_paint.focus_set()
-        #
-        # # Unbind <space> from Listbox to avoid interference
-        # self.paints_color_box.unbind("<space>")
-        # self.paints_color_box.unbind_all("<space>")  # This ensures nothing else is interfering with space
-        #
-        # # Bind <space> to the canvas for fill functionality
-        # self.paints_color_box.unbind_all("<space>")
-        # self.frm_paint.bind('<space>', self.fill_with_color)
-
     def set_paint_color(self, color):
         self.paintColor = color
         self.frm_paint_buttons.config(bg=self.paintColor)
@@ -131,22 +115,13 @@ class DrawingApp:
             print("ifDraw")
             if self.lastMouseX + self.lastMouseY > 0:
                 self.interpolation(event)
-            #self.frm_paint.create_line(self.mouseX, self.mouseY, self.mouseX + 1, self.mouseY + 1, fill=self.paintColor)
             self.draw_pixel(self.mouseX,self.mouseY)
             self.lastMouseX, self.lastMouseY = self.mouseX, self.mouseY
-            # if abs(self.lastMouseX - self.mouseX)>3 or abs(self.lastMouseY - self.mouseY)>3:
-            # self.interpolation()
-        # print(f"Mouse position: ({event.x}, {event.y})")
 
     def draw_pixel(self, x, y):
-        # print("draw pixel","x:",x,"y",y)
-        # self.frm_paint.create_rectangle(x, y, x , y , fill=self.paintColor)
         self.frm_paint.create_line(x, y, x + 1, y + 1, fill=self.paintColor)
 
     def color_picker(self, event):
-        # rint("color")
-        # print("x:",event.x," y:",event.y)
-        # print(self.frm_paint.winfo_width())
         if self.isPressed and self.isPickingColor:
             self.sourceX = event.x_root
             self.sourceY = event.y_root
@@ -162,7 +137,6 @@ class DrawingApp:
     def find_color(self, x, y):
         self.sourceX = x
         self.sourceY = y
-        # self.pic = ImageGrab.grab()
 
         x1 = self.frm_paint.winfo_rootx()
         y1 = self.frm_paint.winfo_rooty()
@@ -174,7 +148,6 @@ class DrawingApp:
         # Capture only the canvas area
         screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
 
-        # self.r, self.g, self.b = self.pic.getpixel((self.sourceX , self.sourceY))
         self.r, self.g, self.b = screenshot.getpixel((self.sourceX, self.sourceY))
         self.hue = f"#{self.r:02x}{self.g:02x}{self.b:02x}"
         # screenshot.show()
@@ -196,19 +169,17 @@ class DrawingApp:
             self.isDrawing = False
             self.isPickingColor = False
             self.isFillingColor = True
+        self.activity_selector()
 
     def activity_selector(self):
         if self.activity == 'Drawing':
             self.frm_paint.bind('<B1-Motion>', self.drawing)
-            # self.drawing(event)
+
         elif self.activity == 'Picking':
-
             self.frm_paint.bind('<B1-Motion>', self.color_picker)
-            # self.color_picker(event)
-        elif self.activity == 'ColorFilling':
 
+        elif self.activity == 'ColorFilling':
             self.frm_paint.bind("<Button-1>",self.fill_with_color)
-            # self.color_picker(event)
 
     def interpolation(self, event):
         # print(self.mouseX, self.lastMouseX,self.mouseY, self.lastMouseY)
@@ -336,8 +307,6 @@ class DrawingApp:
         self.mousePressY = event.y
         self.isPressed = True
         self.activity_selector()
-
-        #because drawing is binded to motion we need to make sure the initial click also draws a pixel
         if self.isDrawing:
             self.draw_pixel(event.x,event.y)
 
@@ -346,7 +315,6 @@ class DrawingApp:
         self.mouseReleaseY = self.mouseY
         self.lastMouseX, self.lastMouseY = 0, 0
         self.isPressed = False
-        # print("Mouse released")
 
     def open_file(self):
         filename = askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
