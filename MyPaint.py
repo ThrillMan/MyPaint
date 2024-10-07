@@ -2,9 +2,6 @@ import math
 import tkinter as tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from PIL import ImageGrab
-import sys
-
-sys.setrecursionlimit(1500)
 from collections import deque
 
 
@@ -108,11 +105,9 @@ class DrawingApp:
         self.frm_paint_buttons.config(bg=self.paintColor)
 
     def drawing(self, event):
-        print("draw")
         self.mouseX = event.x
         self.mouseY = event.y
         if self.isDrawing:
-            print("ifDraw")
             if self.lastMouseX + self.lastMouseY > 0:
                 self.interpolation(event)
             self.draw_pixel(self.mouseX,self.mouseY)
@@ -122,21 +117,21 @@ class DrawingApp:
         self.frm_paint.create_line(x, y, x + 1, y + 1, fill=self.paintColor)
 
     def color_picker(self, event):
-        if self.isPressed and self.isPickingColor:
-            self.sourceX = event.x_root
-            self.sourceY = event.y_root
-            self.pic = ImageGrab.grab()
-            self.r, self.g, self.b = self.pic.getpixel((self.sourceX, self.sourceY))
-            self.hue = f"#{self.r:02x}{self.g:02x}{self.b:02x}"
-            self.paintColor = self.hue
-            print(self.hue)
-            print(self.r, self.g, self.b)
+        if self.isPickingColor:
+            sourceX = event.x_root
+            sourceY = event.y_root
+            pic = ImageGrab.grab()
+            r, g, b = pic.getpixel((sourceX, sourceY))
+            hue = f"#{r:02x}{g:02x}{b:02x}"
+            self.paintColor = hue
+            #print(self.hue)
+            #print(self.r, self.g, self.b)
             self.frm_paint_buttons.config(bg=self.paintColor)
 
 
     def find_color(self, x, y):
-        self.sourceX = x
-        self.sourceY = y
+        sourceX = x
+        sourceY = y
 
         x1 = self.frm_paint.winfo_rootx()
         y1 = self.frm_paint.winfo_rooty()
@@ -148,10 +143,10 @@ class DrawingApp:
         # Capture only the canvas area
         screenshot = ImageGrab.grab(bbox=(x1, y1, x2, y2))
 
-        self.r, self.g, self.b = screenshot.getpixel((self.sourceX, self.sourceY))
-        self.hue = f"#{self.r:02x}{self.g:02x}{self.b:02x}"
+        r, g, b = screenshot.getpixel((sourceX, sourceY))
+        hue = f"#{r:02x}{g:02x}{b:02x}"
         # screenshot.show()
-        return self.hue
+        return hue
 
     def set_current_activity(self, setActivity):
         if setActivity == 'Drawing':
@@ -159,24 +154,42 @@ class DrawingApp:
             self.isDrawing = True
             self.isPickingColor = False
             self.isFillingColor = False
+
+            self.btn_drawing.config(bg='grey')
+            self.btn_color_pick.config(bg='SystemButtonFace')
+            self.btn_color_fill.config(bg='SystemButtonFace')
+
         elif setActivity == 'Picking':
             self.activity = "Picking"
             self.isDrawing = False
             self.isPickingColor = True
             self.isFillingColor = False
+
+            self.btn_drawing.config(bg='SystemButtonFace')
+            self.btn_color_pick.config(bg='grey')
+            self.btn_color_fill.config(bg='SystemButtonFace')
+
         elif setActivity == 'ColorFilling':
             self.activity = "ColorFilling"
             self.isDrawing = False
             self.isPickingColor = False
             self.isFillingColor = True
+
+            self.btn_drawing.config(bg='SystemButtonFace')
+            self.btn_color_pick.config(bg='SystemButtonFace')
+            self.btn_color_fill.config(bg='grey')
+
         self.activity_selector()
 
     def activity_selector(self):
         if self.activity == 'Drawing':
             self.frm_paint.bind('<B1-Motion>', self.drawing)
+            self.frm_paint.unbind("<Button-1>")
 
         elif self.activity == 'Picking':
-            self.frm_paint.bind('<B1-Motion>', self.color_picker)
+
+            self.frm_paint.bind('<Button-1>', self.color_picker)
+
 
         elif self.activity == 'ColorFilling':
             self.frm_paint.bind("<Button-1>",self.fill_with_color)
