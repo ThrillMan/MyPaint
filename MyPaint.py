@@ -32,7 +32,7 @@ class DrawingApp:
         self.root.rowconfigure(0, minsize=800, weight=1)
         self.root.columnconfigure(1, minsize=800, weight=1)
 
-        self.frm_paint = tk.Canvas(self.root, takefocus=True)
+        self.frm_paint = tk.Canvas(self.root, takefocus=True,bg="white")
         self.frm_buttons = tk.Frame(self.root, relief=tk.RAISED, bd=2)
         # self.frm_buttons.rowconfigure(1, weight=1)
 
@@ -100,9 +100,32 @@ class DrawingApp:
         if selected_index:
             selected_color = self.paints_color_box.get(selected_index)
             self.set_paint_color(selected_color)
+
+    def color_to_hex(self, color_name):
+        # Get the RGB values in the range of 0 to 65535
+        rgb_tuple = self.root.winfo_rgb(color_name)
+
+        # Normalize the RGB values to the range 0 to 255 and convert to hexadecimal
+        r = int(rgb_tuple[0] / 256)
+        g = int(rgb_tuple[1] / 256)
+        b = int(rgb_tuple[2] / 256)
+
+        # Format the hex color string and return it
+        return f"#{r:02x}{g:02x}{b:02x}"
+
     def set_paint_color(self, color):
         self.paintColor = color
         self.frm_paint_buttons.config(bg=self.paintColor)
+
+        # Update the selection in the Listbox
+        color_list = self.paints_color_box.get(0, tk.END)  # Get all items from the Listbox
+        for index, item in enumerate(color_list):
+            if self.color_to_hex(item) == color:
+
+                self.paints_color_box.selection_clear(0, tk.END)  # Clear any previous selection
+                self.paints_color_box.selection_set(index)  # Select the matching color
+                self.paints_color_box.activate(index)  # Set it as the active item
+                break
 
     def drawing(self, event):
         self.mouseX = event.x
@@ -123,7 +146,8 @@ class DrawingApp:
             pic = ImageGrab.grab()
             r, g, b = pic.getpixel((sourceX, sourceY))
             hue = f"#{r:02x}{g:02x}{b:02x}"
-            self.paintColor = hue
+            #self.paintColor = hue
+            self.set_paint_color(hue)
             #print(self.hue)
             #print(self.r, self.g, self.b)
             self.frm_paint_buttons.config(bg=self.paintColor)
