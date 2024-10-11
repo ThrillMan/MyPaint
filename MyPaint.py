@@ -1,7 +1,7 @@
 import math
 import tkinter as tk
 from tkinter.filedialog import askopenfilename, asksaveasfilename
-from PIL import ImageGrab
+from PIL import ImageGrab, Image, ImageTk
 from collections import deque
 
 
@@ -298,7 +298,7 @@ class DrawingApp:
         for line in lines:
             self.frm_paint.create_line(line[0], line[1], line[2], line[3] + 1, fill=self.paintColor, width=1)
 
-    # used for finding rectangles in floodfill algorithm
+    # used for finding lines in floodfill algorithm
     def find_rect(self, pixels):
 
         rectCord = []
@@ -356,15 +356,32 @@ class DrawingApp:
     def open_file(self):
         filename = askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
         if filename:
-            print(f"Opened file: {filename}")
-            # Add logic to open and display the image on the canvas
+            #loading the image
+            image = Image.open(filename)
+
+            #making the image usable for tkinter
+            self.tk_image = ImageTk.PhotoImage(image)
+
+            self.frm_paint.delete("all")
+            self.frm_paint.create_image(0, 0, image=self.tk_image,anchor=tk.NW)
 
     def save_file(self):
         filename = asksaveasfilename(defaultextension=".png",
                                      filetypes=[("PNG Files", "*.png"), ("JPEG Files", "*.jpg;*.jpeg")])
         if filename:
+            # Get the bounding box (position and size) of the canvas
+            x1 = self.frm_paint.winfo_rootx()
+            y1 = self.frm_paint.winfo_rooty()
+            x2 = x1 + self.frm_paint.winfo_width()
+            y2 = y1 + self.frm_paint.winfo_height()
+
+            # Capture the canvas area as an image using ImageGrab
+            canvas_image = ImageGrab.grab(bbox=(x1+2, y1+2, x2-2, y2-2))
+
+            # Save the captured image to the file
+            canvas_image.save(filename)
+
             print(f"Saved file as: {filename}")
-            # Add logic to save the canvas content as an image
 
 
 if __name__ == "__main__":
