@@ -6,6 +6,7 @@ from collections import deque
 
 
 
+
 class DrawingApp:
     def __init__(self, root):
         self.root = root
@@ -47,7 +48,8 @@ class DrawingApp:
         self.frm_paint_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1, background="black")
         self.frm_paint_buttons.grid_columnconfigure(0, weight=1)
 
-        self.paints_color_box = tk.Listbox(self.frm_paint_buttons)
+        self.paints_color_box = tk.Listbox(self.frm_paint_buttons,activestyle = "none")
+
         self.paints_color_box.grid(row=0, column=0, sticky="ew", padx=5, pady=5)  # Add Listbox to grid
 
         # Create scrollbar for the Listbox
@@ -61,6 +63,8 @@ class DrawingApp:
         # Insert color names into the Listbox
         for color in color_names:
             self.paints_color_box.insert(tk.END, color)
+        #sets the list selection to black color, where it should be
+        self.paints_color_box.select_set(4)
 
         self.paints_color_box.config(yscrollcommand=self.scrollbar.set)
         self.scrollbar.config(command=self.paints_color_box.yview)
@@ -107,6 +111,7 @@ class DrawingApp:
             selected_color = self.paints_color_box.get(selected_index)
             self.set_paint_color(selected_color)
 
+
     def color_to_hex(self, color_name):
         # Get the RGB values in the range of 0 to 65535
         rgb_tuple = self.root.winfo_rgb(color_name)
@@ -125,12 +130,18 @@ class DrawingApp:
 
         # Update the selection in the Listbox
         color_list = self.paints_color_box.get(0, tk.END)  # Get all items from the Listbox
+        isInTheList = False
         for index, item in enumerate(color_list):
             if self.color_to_hex(item) == color:
+                isInTheList = True
                 self.paints_color_box.selection_clear(0, tk.END)  # Clear any previous selection
                 self.paints_color_box.selection_set(index)  # Select the matching color
                 self.paints_color_box.activate(index)  # Set it as the active item
                 break
+
+        #if picked color is not on the list then deselect currently active element
+        if not isInTheList and self.isPickingColor:
+            self.paints_color_box.selection_clear(0, tk.END)
 
     def drawing(self, event):
         self.mouseX = event.x
@@ -138,7 +149,6 @@ class DrawingApp:
 
         # makes sure there is no space between paint brush if it is moved quickly
         if self.isDrawing:
-            size = self.pencil_size_value.get()
             if self.lastMouseX + self.lastMouseY > 0:
                 self.interpolation(event)
 
@@ -181,10 +191,7 @@ class DrawingApp:
             pic = ImageGrab.grab()
             r, g, b = pic.getpixel((sourceX, sourceY))
             hue = f"#{r:02x}{g:02x}{b:02x}"
-            # self.paintColor = hue
             self.set_paint_color(hue)
-            # print(self.hue)
-            # print(self.r, self.g, self.b)
             self.frm_paint_buttons.config(bg=self.paintColor)
 
     def find_color(self, x, y):
