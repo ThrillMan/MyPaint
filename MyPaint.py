@@ -5,6 +5,7 @@ from PIL import ImageGrab, Image, ImageTk
 from collections import deque
 
 
+
 class DrawingApp:
     def __init__(self, root):
         self.root = root
@@ -32,7 +33,7 @@ class DrawingApp:
         self.root.rowconfigure(0, minsize=800, weight=1)
         self.root.columnconfigure(1, minsize=800, weight=1)
 
-        self.frm_paint = tk.Canvas(self.root, takefocus=True,bg="white")
+        self.frm_paint = tk.Canvas(self.root, takefocus=True, bg="white")
         self.frm_buttons = tk.Frame(self.root, relief=tk.RAISED, bd=2)
         # self.frm_buttons.rowconfigure(1, weight=1)
 
@@ -68,7 +69,6 @@ class DrawingApp:
         self.paints_color_box.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         self.scrollbar.grid(row=0, column=1, sticky="ns")
 
-
         self.frm_tool_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1)
         self.frm_tool_buttons.grid_columnconfigure(0, weight=1)
         self.btn_drawing = tk.Button(self.frm_tool_buttons, text="Draw",
@@ -77,9 +77,16 @@ class DrawingApp:
                                         command=lambda: self.set_current_activity("Picking"))
         self.btn_color_fill = tk.Button(self.frm_tool_buttons, text="Fill With Color",
                                         command=lambda: self.set_current_activity("ColorFilling"))
+        self.pencil_size_value = tk.IntVar()
+        self.pencil_size_slider = tk.Scale(self.frm_tool_buttons, from_=1, to=10,
+                                           orient=tk.HORIZONTAL, variable=self.pencil_size_value)
+        self.pencil_size_text = tk.Label(self.frm_tool_buttons, text="Pencil Size")
+
         self.btn_drawing.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         self.btn_color_pick.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         self.btn_color_fill.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
+        self.pencil_size_slider.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
+        self.pencil_size_text.grid(row=4, column=0, sticky="ew", padx=5, pady=5)
 
         self.frm_control_buttons.grid(row=0, column=0, sticky="ew", padx=5)
         self.frm_paint_buttons.grid(row=1, column=0, sticky="ew", padx=5)
@@ -92,7 +99,6 @@ class DrawingApp:
         self.paints_color_box.bind("<<ListboxSelect>>", self.on_color_select)
         self.frm_paint.bind('<ButtonPress-1>', self.click_press)
         self.frm_paint.bind('<ButtonRelease-1>', self.click_release)
-
 
     def on_color_select(self, event):
         # Handles the selection of a color from the Listbox.
@@ -121,7 +127,6 @@ class DrawingApp:
         color_list = self.paints_color_box.get(0, tk.END)  # Get all items from the Listbox
         for index, item in enumerate(color_list):
             if self.color_to_hex(item) == color:
-
                 self.paints_color_box.selection_clear(0, tk.END)  # Clear any previous selection
                 self.paints_color_box.selection_set(index)  # Select the matching color
                 self.paints_color_box.activate(index)  # Set it as the active item
@@ -130,14 +135,44 @@ class DrawingApp:
     def drawing(self, event):
         self.mouseX = event.x
         self.mouseY = event.y
+
+        # makes sure there is no space between paint brush if it is moved quickly
         if self.isDrawing:
+            size = self.pencil_size_value.get()
             if self.lastMouseX + self.lastMouseY > 0:
                 self.interpolation(event)
-            self.draw_pixel(self.mouseX,self.mouseY)
+
+            self.draw_pixel(self.mouseX, self.mouseY)
             self.lastMouseX, self.lastMouseY = self.mouseX, self.mouseY
 
+    def interpolation(self, event):
+        size = self.pencil_size_value.get()
+        dx = self.mouseX - self.lastMouseX
+        dy = self.mouseY - self.lastMouseY
+        distance = math.sqrt(dx ** 2 + dy ** 2)
+
+        steps = int(distance / size) * 2
+
+        if steps == 0:
+            # If the points are close enough, just draw a single square
+            self.draw_pixel(self.mouseX, self.mouseY)
+            return
+
+        # Calculate the step increments for x and y
+        x_step = dx / steps
+        y_step = dy / steps
+
+        # Draw squares at each interpolated step
+        for i in range(steps):
+            x = self.lastMouseX + i * x_step
+            y = self.lastMouseY + i * y_step
+            self.draw_pixel(x, y)
+
+        self.draw_pixel(self.mouseX, self.mouseY)
+
     def draw_pixel(self, x, y):
-        self.frm_paint.create_line(x, y, x + 1, y + 1, fill=self.paintColor)
+        size = self.pencil_size_value.get()
+        self.frm_paint.create_rectangle(x, y, x + size, y + size, fill=self.paintColor, outline="")
 
     def color_picker(self, event):
         if self.isPickingColor:
@@ -146,12 +181,11 @@ class DrawingApp:
             pic = ImageGrab.grab()
             r, g, b = pic.getpixel((sourceX, sourceY))
             hue = f"#{r:02x}{g:02x}{b:02x}"
-            #self.paintColor = hue
+            # self.paintColor = hue
             self.set_paint_color(hue)
-            #print(self.hue)
-            #print(self.r, self.g, self.b)
+            # print(self.hue)
+            # print(self.r, self.g, self.b)
             self.frm_paint_buttons.config(bg=self.paintColor)
-
 
     def find_color(self, x, y):
         sourceX = x
@@ -207,8 +241,9 @@ class DrawingApp:
 
     def activity_selector(self):
         if self.activity == 'Drawing':
+
             self.frm_paint.bind('<B1-Motion>', self.drawing)
-            self.frm_paint.unbind("<Button-1>")
+            # self.frm_paint.unbind("<Button-1>")
 
         elif self.activity == 'Picking':
 
@@ -216,15 +251,10 @@ class DrawingApp:
 
 
         elif self.activity == 'ColorFilling':
-            self.frm_paint.bind("<Button-1>",self.fill_with_color)
-
-    def interpolation(self, event):
-        # print(self.mouseX, self.lastMouseX,self.mouseY, self.lastMouseY)
-        self.frm_paint.create_line(self.mouseX, self.mouseY, self.lastMouseX, self.lastMouseY, fill=self.paintColor,
-                                   smooth=1)
+            self.frm_paint.bind("<Button-1>", self.fill_with_color)
 
     def fill_with_color(self, event):
-        print("fill")
+        # print("fill")
         if self.isFillingColor:
             self.sourceX = event.x
             self.sourceY = event.y
@@ -249,10 +279,9 @@ class DrawingApp:
                 arrImg.append(tempXArr)
 
             ogColor = arrImg[event.y][event.x]
-            print("ogcolor:", ogColor, event.x, event.y)
+            # print("ogcolor:", ogColor, event.x, event.y)
             self.flood_fill(arrImg, event.x, event.y, self.paintColor)
             self.draw_pixel(event.x, event.y)
-
 
     def flood_fill(self, img, x, y, newColor):
         q = deque()
@@ -333,7 +362,7 @@ class DrawingApp:
 
             rectCord.append((x_1, y_1, x_1, y_2))
 
-        print(len(pixels), len(rectCord))
+        # print(len(pixels), len(rectCord))
 
         # solves issue of the last pixel not being properly colored
         self.draw_pixel(pixels[-1][0], pixels[-1][1])
@@ -344,8 +373,10 @@ class DrawingApp:
         self.mousePressY = event.y
         self.isPressed = True
         self.activity_selector()
+        print(self.isDrawing)
         if self.isDrawing:
-            self.draw_pixel(event.x,event.y)
+            print("halko")
+            self.draw_pixel(event.x, event.y)
 
     def click_release(self, event):
         self.mouseReleaseX = self.mouseX
@@ -356,14 +387,14 @@ class DrawingApp:
     def open_file(self):
         filename = askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
         if filename:
-            #loading the image
+            # loading the image
             image = Image.open(filename)
 
-            #making the image usable for tkinter
+            # making the image usable for tkinter
             self.tk_image = ImageTk.PhotoImage(image)
 
             self.frm_paint.delete("all")
-            self.frm_paint.create_image(0, 0, image=self.tk_image,anchor=tk.NW)
+            self.frm_paint.create_image(0, 0, image=self.tk_image, anchor=tk.NW)
 
     def save_file(self):
         filename = asksaveasfilename(defaultextension=".png",
@@ -376,7 +407,7 @@ class DrawingApp:
             y2 = y1 + self.frm_paint.winfo_height()
 
             # Capture the canvas area as an image using ImageGrab
-            canvas_image = ImageGrab.grab(bbox=(x1+2, y1+2, x2-2, y2-2))
+            canvas_image = ImageGrab.grab(bbox=(x1 + 2, y1 + 2, x2 - 2, y2 - 2))
 
             # Save the captured image to the file
             canvas_image.save(filename)
