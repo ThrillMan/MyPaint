@@ -63,7 +63,7 @@ class DrawingApp:
         # Insert color names into the Listbox
         for color in color_names:
             self.paints_color_box.insert(tk.END, color)
-        #sets the list selection to black color, where it should be
+        # sets the list selection to black color, where it should be
         self.paints_color_box.select_set(4)
 
         self.paints_color_box.config(yscrollcommand=self.scrollbar.set)
@@ -248,14 +248,11 @@ class DrawingApp:
 
     def activity_selector(self):
         if self.activity == 'Drawing':
-
             self.frm_paint.bind('<B1-Motion>', self.drawing)
-            # self.frm_paint.unbind("<Button-1>")
+            self.frm_paint.bind('<Button-1>', self.click_press)
 
         elif self.activity == 'Picking':
-
             self.frm_paint.bind('<Button-1>', self.color_picker)
-
 
         elif self.activity == 'ColorFilling':
             self.frm_paint.bind("<Button-1>", self.fill_with_color)
@@ -369,23 +366,23 @@ class DrawingApp:
 
             rectCord.append((x_1, y_1, x_1, y_2))
 
-        # print(len(pixels), len(rectCord))
-
         # solves issue of the last pixel not being properly colored
-        self.draw_pixel(pixels[-1][0], pixels[-1][1])
+        self.frm_paint.create_rectangle(pixels[-1][0], pixels[-1][1], pixels[-1][0]+1, pixels[-1][1]+1,
+                                        fill=self.paintColor, outline="")
         return rectCord
 
     def click_press(self, event):
         self.mousePressX = event.x
         self.mousePressY = event.y
         self.isPressed = True
-        self.activity_selector()
-        print(self.isDrawing)
         if self.isDrawing:
-            print("halko")
+            # Draws the initial pixel which would otherwise be drawn because of how binding works
             self.draw_pixel(event.x, event.y)
+        #self.activity_selector()
+
 
     def click_release(self, event):
+
         self.mouseReleaseX = self.mouseX
         self.mouseReleaseY = self.mouseY
         self.lastMouseX, self.lastMouseY = 0, 0
