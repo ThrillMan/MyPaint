@@ -5,8 +5,6 @@ from PIL import ImageGrab, Image, ImageTk
 from collections import deque
 
 
-
-
 class DrawingApp:
     def __init__(self, root):
         self.root = root
@@ -27,7 +25,9 @@ class DrawingApp:
         self.isPickingColor = False
         self.isFillingColor = False
         self.points = []
-
+        # used for storing recent versions
+        self.versions = []
+        self.isFirstUndo = True
         self.setup_ui()
 
     def setup_ui(self):
@@ -48,7 +48,7 @@ class DrawingApp:
         self.frm_paint_buttons = tk.Frame(self.frm_buttons, relief=tk.RAISED, bd=1, background="black")
         self.frm_paint_buttons.grid_columnconfigure(0, weight=1)
 
-        self.paints_color_box = tk.Listbox(self.frm_paint_buttons,activestyle = "none")
+        self.paints_color_box = tk.Listbox(self.frm_paint_buttons, activestyle="none")
 
         self.paints_color_box.grid(row=0, column=0, sticky="ew", padx=5, pady=5)  # Add Listbox to grid
 
@@ -86,11 +86,15 @@ class DrawingApp:
                                            orient=tk.HORIZONTAL, variable=self.pencil_size_value)
         self.pencil_size_text = tk.Label(self.frm_tool_buttons, text="Pencil Size")
 
+        self.undo_btn = tk.Button(self.frm_tool_buttons, text="Undo",
+                                  command=lambda: self.undo())
+
         self.btn_drawing.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
         self.btn_color_pick.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
         self.btn_color_fill.grid(row=2, column=0, sticky="ew", padx=5, pady=5)
         self.pencil_size_slider.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
         self.pencil_size_text.grid(row=4, column=0, sticky="ew", padx=5, pady=5)
+        self.undo_btn.grid(row=5, column=0, sticky="ew", padx=5, pady=5)
 
         self.frm_control_buttons.grid(row=0, column=0, sticky="ew", padx=5)
         self.frm_paint_buttons.grid(row=1, column=0, sticky="ew", padx=5)
@@ -104,13 +108,14 @@ class DrawingApp:
         self.frm_paint.bind('<ButtonPress-1>', self.click_press)
         self.frm_paint.bind('<ButtonRelease-1>', self.click_release)
 
+
+
     def on_color_select(self, event):
         # Handles the selection of a color from the Listbox.
         selected_index = self.paints_color_box.curselection()
         if selected_index:
             selected_color = self.paints_color_box.get(selected_index)
             self.set_paint_color(selected_color)
-
 
     def color_to_hex(self, color_name):
         # Get the RGB values in the range of 0 to 65535
@@ -139,9 +144,43 @@ class DrawingApp:
                 self.paints_color_box.activate(index)  # Set it as the active item
                 break
 
-        #if picked color is not on the list then deselect currently active element
+        # if picked color is not on the list then deselect currently active element
         if not isInTheList and self.isPickingColor:
             self.paints_color_box.selection_clear(0, tk.END)
+
+    def undo(self):
+        print(self.isFirstUndo)
+        #print("undo before", len(self.versions))
+        if len(self.versions) == 0:
+            self.isFirstUndo = False
+            # self.save_action()
+            return
+        # function for undoing action
+        if len(self.versions) == 1 or not self.isFirstUndo:
+            image = self.versions.pop(len(self.versions) - 1)
+        else:
+            self.versions.pop(len(self.versions) - 1)
+            image = self.versions.pop(len(self.versions) - 1)
+        # making the image usable for tkinter
+        self.isFirstUndo = False
+        self.tk_image = ImageTk.PhotoImage(image)
+
+        self.frm_paint.delete("all")
+        self.frm_paint.create_image(0, 0, image=self.tk_image, anchor=tk.NW)
+        #print("undo After", len(self.versions))
+
+    def save_action(self):
+        #print("save before", len(self.versions))
+        # Get the bounding box (position and size) of the canvas
+        x1 = self.frm_paint.winfo_rootx()
+        y1 = self.frm_paint.winfo_rooty()
+        x2 = x1 + self.frm_paint.winfo_width()
+        y2 = y1 + self.frm_paint.winfo_height()
+
+        # Capture the canvas area as an image using ImageGrab
+        canvas_image = ImageGrab.grab(bbox=(x1 , y1 , x2 - 2, y2 - 2))
+        self.versions.append(canvas_image)
+        #print("save After", len(self.versions))
 
     def drawing(self, event):
         self.mouseX = event.x
@@ -214,6 +253,10 @@ class DrawingApp:
         return hue
 
     def set_current_activity(self, setActivity):
+        # important for undo tool, without it initial white frame wont be saved in activities
+        if self.activity is None:
+            self.save_action()
+
         if setActivity == 'Drawing':
             self.activity = "Drawing"
             self.isDrawing = True
@@ -295,6 +338,7 @@ class DrawingApp:
         n = self.frm_paint.winfo_width()  # x-axis (columns)
         prevColor = img[y][x]  # Get the initial color
         if prevColor == newColor:
+
             return
 
         q.append((x, y))
@@ -367,19 +411,21 @@ class DrawingApp:
             rectCord.append((x_1, y_1, x_1, y_2))
 
         # solves issue of the last pixel not being properly colored
-        self.frm_paint.create_rectangle(pixels[-1][0], pixels[-1][1], pixels[-1][0]+1, pixels[-1][1]+1,
+        self.frm_paint.create_rectangle(pixels[-1][0], pixels[-1][1], pixels[-1][0] + 1, pixels[-1][1] + 1,
                                         fill=self.paintColor, outline="")
         return rectCord
 
+# todo undo -> fill -> undo usuwa dwa obrazy na raz
     def click_press(self, event):
-        self.mousePressX = event.x
-        self.mousePressY = event.y
+
         self.isPressed = True
+        print("klik")
+        if self.activity is not None and self.isFirstUndo==False:
+            self.save_action()
         if self.isDrawing:
             # Draws the initial pixel which would otherwise be drawn because of how binding works
             self.draw_pixel(event.x, event.y)
-        #self.activity_selector()
-
+        # self.activity_selector()
 
     def click_release(self, event):
 
@@ -387,6 +433,9 @@ class DrawingApp:
         self.mouseReleaseY = self.mouseY
         self.lastMouseX, self.lastMouseY = 0, 0
         self.isPressed = False
+        if self.activity is not None and self.activity!='ColorFilling':
+            self.isFirstUndo = True
+            self.save_action()
 
     def open_file(self):
         filename = askopenfilename(filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
