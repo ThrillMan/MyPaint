@@ -108,8 +108,6 @@ class DrawingApp:
         self.frm_paint.bind('<ButtonPress-1>', self.click_press)
         self.frm_paint.bind('<ButtonRelease-1>', self.click_release)
 
-
-
     def on_color_select(self, event):
         # Handles the selection of a color from the Listbox.
         selected_index = self.paints_color_box.curselection()
@@ -149,8 +147,6 @@ class DrawingApp:
             self.paints_color_box.selection_clear(0, tk.END)
 
     def undo(self):
-        print(self.isFirstUndo)
-        #print("undo before", len(self.versions))
         if len(self.versions) == 0:
             self.isFirstUndo = False
             # self.save_action()
@@ -163,14 +159,13 @@ class DrawingApp:
             image = self.versions.pop(len(self.versions) - 1)
         # making the image usable for tkinter
         self.isFirstUndo = False
+
         self.tk_image = ImageTk.PhotoImage(image)
 
         self.frm_paint.delete("all")
         self.frm_paint.create_image(0, 0, image=self.tk_image, anchor=tk.NW)
-        #print("undo After", len(self.versions))
 
     def save_action(self):
-        #print("save before", len(self.versions))
         # Get the bounding box (position and size) of the canvas
         x1 = self.frm_paint.winfo_rootx()
         y1 = self.frm_paint.winfo_rooty()
@@ -178,9 +173,8 @@ class DrawingApp:
         y2 = y1 + self.frm_paint.winfo_height()
 
         # Capture the canvas area as an image using ImageGrab
-        canvas_image = ImageGrab.grab(bbox=(x1 , y1 , x2 - 2, y2 - 2))
+        canvas_image = ImageGrab.grab(bbox=(x1, y1, x2 - 2, y2 - 2))
         self.versions.append(canvas_image)
-        #print("save After", len(self.versions))
 
     def drawing(self, event):
         self.mouseX = event.x
@@ -291,6 +285,8 @@ class DrawingApp:
 
     def activity_selector(self):
         if self.activity == 'Drawing':
+            self.frm_paint.unbind("<Button-1>")
+
             self.frm_paint.bind('<B1-Motion>', self.drawing)
             self.frm_paint.bind('<Button-1>', self.click_press)
 
@@ -299,9 +295,9 @@ class DrawingApp:
 
         elif self.activity == 'ColorFilling':
             self.frm_paint.bind("<Button-1>", self.fill_with_color)
+            # self.frm_paint.bind("<Button-1>", self.fill_with_color, add=True)
 
     def fill_with_color(self, event):
-        # print("fill")
         if self.isFillingColor:
             self.sourceX = event.x
             self.sourceY = event.y
@@ -325,10 +321,11 @@ class DrawingApp:
                     tempXArr.append(self.hue)
                 arrImg.append(tempXArr)
 
-            ogColor = arrImg[event.y][event.x]
-            # print("ogcolor:", ogColor, event.x, event.y)
             self.flood_fill(arrImg, event.x, event.y, self.paintColor)
             self.draw_pixel(event.x, event.y)
+
+            # ensures filled color is registered in self.versions = []
+            root.update_idletasks()
 
     def flood_fill(self, img, x, y, newColor):
         q = deque()
@@ -338,7 +335,6 @@ class DrawingApp:
         n = self.frm_paint.winfo_width()  # x-axis (columns)
         prevColor = img[y][x]  # Get the initial color
         if prevColor == newColor:
-
             return
 
         q.append((x, y))
@@ -415,12 +411,10 @@ class DrawingApp:
                                         fill=self.paintColor, outline="")
         return rectCord
 
-# todo undo -> fill -> undo usuwa dwa obrazy na raz
     def click_press(self, event):
-
         self.isPressed = True
-        print("klik")
-        if self.activity is not None and self.isFirstUndo==False:
+        if self.activity is not None and self.isFirstUndo == False:
+            self.isFirstUndo = True
             self.save_action()
         if self.isDrawing:
             # Draws the initial pixel which would otherwise be drawn because of how binding works
@@ -433,7 +427,7 @@ class DrawingApp:
         self.mouseReleaseY = self.mouseY
         self.lastMouseX, self.lastMouseY = 0, 0
         self.isPressed = False
-        if self.activity is not None and self.activity!='ColorFilling':
+        if self.activity is not None:
             self.isFirstUndo = True
             self.save_action()
 
